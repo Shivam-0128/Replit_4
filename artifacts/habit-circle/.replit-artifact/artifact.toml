@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Habit Circle"
+description = "A simple community habit tracker for friends and colleagues, with private habits, daily completion tracking, and discussions on shared habits."
+version = "1.0.0"
+id = "artifacts/habit-circle"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23681
+
+[services.development]
+run = "pnpm --filter @workspace/habit-circle run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/habit-circle", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/habit-circle/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23681"
+BASE_PATH = "/"

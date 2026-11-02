@@ -1,0 +1,1 @@
+- [Authentication choice](product-scope.md) — Why this project uses custom accounts instead of a managed verification flow.

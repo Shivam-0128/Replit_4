@@ -1,36 +1,218 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
 servers:
   - url: /api
-    description: Base API path
-tags:
-  - name: health
-    description: Health operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
-      tags: [health]
-      summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
           content:
             application/json:
+              schema: { $ref: "#/components/schemas/HealthStatus" }
+  /auth/me:
+    get:
+      operationId: getMe
+      responses:
+        "200":
+          description: Current account
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { description: Not signed in }
+  /auth/signup:
+    post:
+      operationId: signUp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Registration" }
+      responses:
+        "201":
+          description: Account created and signed in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+  /auth/signin:
+    post:
+      operationId: signIn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+  /auth/signout:
+    post:
+      operationId: signOut
+      responses:
+        "204": { description: Signed out }
+  /habits:
+    get:
+      operationId: listHabits
+      responses:
+        "200":
+          description: Own habits only
+          content:
+            application/json:
               schema:
-                $ref: "#/components/schemas/HealthStatus"
+                type: array
+                items: { $ref: "#/components/schemas/Habit" }
+    post:
+      operationId: addHabit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HabitInput" }
+      responses:
+        "201":
+          description: Habit added
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Habit" }
+  /community:
+    get:
+      operationId: listCommunity
+      responses:
+        "200":
+          description: Shared habits only
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Habit" }
+  /habits/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      operationId: getHabit
+      responses:
+        "200":
+          description: Own or shared habit
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Habit" }
+        "404": { description: Not found or private }
+  /habits/{id}/completion:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    put:
+      operationId: setCompletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompletionInput" }
+      responses:
+        "200":
+          description: Updated habit
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Habit" }
+  /habits/{id}/comments:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      operationId: listComments
+      responses:
+        "200":
+          description: Discussion on shared habit
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Comment" }
+    post:
+      operationId: postComment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentInput" }
+      responses:
+        "201":
+          description: Posted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Comment" }
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
-
+        status: { type: string }
+    User:
+      type: object
+      required: [id, displayName, email]
+      properties:
+        id: { type: integer }
+        displayName: { type: string }
+        email: { type: string }
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+    Registration:
+      type: object
+      required: [displayName, email, password]
+      properties:
+        displayName: { type: string, minLength: 1, maxLength: 80 }
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+    HabitInput:
+      type: object
+      required: [name, whenIDoIt, shared]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 150 }
+        whenIDoIt: { type: string, minLength: 1, maxLength: 2000 }
+        shared: { type: boolean, default: false }
+    Habit:
+      type: object
+      required: [id, name, whenIDoIt, shared, ownerId, ownerName, daysDone, currentStreak, completedDates, commentCount, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        whenIDoIt: { type: string }
+        shared: { type: boolean }
+        ownerId: { type: integer }
+        ownerName: { type: string }
+        daysDone: { type: integer }
+        currentStreak: { type: integer }
+        completedDates: { type: array, items: { type: string } }
+        commentCount: { type: integer }
+        createdAt: { type: string }
+    CompletionInput:
+      type: object
+      required: [date, completed]
+      properties:
+        date: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        completed: { type: boolean }
+    CommentInput:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string, minLength: 1, maxLength: 4000 }
+    Comment:
+      type: object
+      required: [id, habitId, authorId, authorName, text, createdAt]
+      properties:
+        id: { type: integer }
+        habitId: { type: integer }
+        authorId: { type: integer }
+        authorName: { type: string }
+        text: { type: string }
+        createdAt: { type: string }
